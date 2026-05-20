@@ -1,0 +1,18 @@
+{
+  "name": "Regalia Announcements",
+  "short_name": "Regalia",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#141218",
+  "theme_color": "#6750A4",
+  "description": "Stay up to date with live announcements from Regalia Church.",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/assets/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

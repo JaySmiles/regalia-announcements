@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Regalia Announcements</string>
+    <string name="title_activity_main">Regalia Announcements</string>
+    <string name="package_name">com.regalia.announcements</string>
+    <string name="custom_url_scheme">com.regalia.announcements</string>
+</resources>
