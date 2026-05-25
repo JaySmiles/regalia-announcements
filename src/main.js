@@ -2,7 +2,7 @@ import './style.css';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Haptics } from '@capacitor/haptics';
 import { Capacitor } from '@capacitor/core';
-import { GOOGLE_SHEET_CSV_URL, MOCK_ANNOUNCEMENTS } from './config.js';
+import { GOOGLE_SHEET_CSV_URL } from './config.js';
 
 // DOM Elements
 const videoSplash = document.getElementById('video-splash');
@@ -356,11 +356,6 @@ async function checkAndNotifyNew(newData) {
 // --- 6. CORE FETCH & RESILIENCE ENGINE ---
 async function fetchAnnouncements() {
   try {
-    // Check if network is available
-    if (!navigator.onLine) {
-      throw new Error("No internet connection");
-    }
-
     const response = await fetch(GOOGLE_SHEET_CSV_URL);
     if (!response.ok) {
       throw new Error(`Server returned status: ${response.status}`);
@@ -407,9 +402,8 @@ async function fetchAnnouncements() {
     if (cached) {
       announcementsData = JSON.parse(cached);
     } else {
-      // Offline & no cache: Load premium mock data so we never display a blank app
-      console.log("No cache found, loading default mock data.");
-      announcementsData = MOCK_ANNOUNCEMENTS;
+      console.log("No cache found.");
+      announcementsData = [];
     }
     processAndRenderFeed();
   }
@@ -524,7 +518,7 @@ window.addEventListener('load', async () => {
     announcementsData = JSON.parse(cached);
     processAndRenderFeed();
   } else {
-    announcementsData = MOCK_ANNOUNCEMENTS;
+    announcementsData = [];
     processAndRenderFeed();
   }
 
