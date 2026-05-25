@@ -35,14 +35,14 @@ jobs:
     - name: Synchronize Capacitor Android Wrapper
       run: npx cap sync android
 
-    - name: Compile Release Android App (APK)
+    - name: Compile Debug Android App (APK)
       run: |
         cd android
         chmod +x gradlew
-        ./gradlew assembleRelease
+        ./gradlew assembleDebug
 
-    - name: Upload Release APK Artifact
+    - name: Upload Debug APK Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: regalia-announcements-release-apk
-        path: android/app/build/outputs/apk/release/app-release-unsigned.apk
+        name: regalia-announcements-debug-apk
+        path: android/app/build/outputs/apk/debug/app-debug.apk
