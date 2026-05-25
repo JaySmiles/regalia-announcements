@@ -1,7 +1,7 @@
 import './style.css';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Haptics } from '@capacitor/haptics';
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { GOOGLE_SHEET_CSV_URL } from './config.js';
 
 // DOM Elements
@@ -170,13 +170,15 @@ function parseCSV(text) {
 }
 
 // --- 4. DATA ENGINE: SEGMENTATION & SORTING ---
-// Today is May 20, 2026
-const SYSTEM_DATE = new Date("2026-05-20T14:24:37Z");
+function getToday() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
 
 function getRelativeDateString(dateStr) {
   try {
     const targetDate = new Date(dateStr + "T00:00:00");
-    const today = new Date(SYSTEM_DATE.getFullYear(), SYSTEM_DATE.getMonth(), SYSTEM_DATE.getDate());
+    const today = getToday();
     
     const diffTime = targetDate.getTime() - today.getTime();
     const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
@@ -205,7 +207,7 @@ function processAndRenderFeed() {
     past: []
   };
 
-  const todayDate = new Date(SYSTEM_DATE.getFullYear(), SYSTEM_DATE.getMonth(), SYSTEM_DATE.getDate());
+  const todayDate = getToday();
 
   announcementsData.forEach(item => {
     const target = new Date(item.targetDate + "T00:00:00");
@@ -354,14 +356,31 @@ async function checkAndNotifyNew(newData) {
 }
 
 // --- 6. CORE FETCH & RESILIENCE ENGINE ---
-async function fetchAnnouncements() {
-  try {
-    const response = await fetch(GOOGLE_SHEET_CSV_URL);
-    if (!response.ok) {
+async function fetchCsvText(url) {
+  if (Capacitor.isNativePlatform()) {
+    const response = await CapacitorHttp.get({
+      url,
+      responseType: 'text',
+    });
+
+    if (response.status < 200 || response.status >= 300) {
       throw new Error(`Server returned status: ${response.status}`);
     }
 
-    const csvText = await response.text();
+    return typeof response.data === 'string' ? response.data : String(response.data ?? '');
+  }
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Server returned status: ${response.status}`);
+  }
+
+  return response.text();
+}
+
+async function fetchAnnouncements() {
+  try {
+    const csvText = await fetchCsvText(GOOGLE_SHEET_CSV_URL);
     const rows = parseCSV(csvText);
 
     // Schema Mapping (expecting 4 columns)
