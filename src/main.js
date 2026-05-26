@@ -27,7 +27,10 @@ let announcementsData = [];
 let isPulling = false;
 let startY = 0;
 let pullDistance = 0;
+let refreshIntervalId = null;
+let refreshInFlight = false;
 const PULL_THRESHOLD = 80; // Distance in px required to refresh
+const AUTO_REFRESH_INTERVAL_MS = 10000;
 
 // --- 1. LIGHT / DARK MODE SYSTEM ---
 function initTheme() {
@@ -540,6 +543,29 @@ async function fetchAnnouncements() {
   }
 }
 
+async function refreshAnnouncements({ skipWhenOffline = true } = {}) {
+  if (refreshInFlight) return;
+  if (skipWhenOffline && !navigator.onLine) {
+    setConnectionStatus(false);
+    return;
+  }
+
+  refreshInFlight = true;
+  try {
+    await fetchAnnouncements();
+  } finally {
+    refreshInFlight = false;
+  }
+}
+
+function startAutoRefresh() {
+  if (refreshIntervalId) return;
+
+  refreshIntervalId = setInterval(() => {
+    refreshAnnouncements();
+  }, AUTO_REFRESH_INTERVAL_MS);
+}
+
 // --- 7. PULL TO REFRESH INTERACTIONS ---
 function initPullToRefresh() {
   scrollWrapper.addEventListener('touchstart', (e) => {
@@ -591,7 +617,7 @@ function initPullToRefresh() {
       // Keep pull container open during load
       pullIndicatorContainer.style.height = `${PULL_THRESHOLD}px`;
       
-      await fetchAnnouncements();
+      await refreshAnnouncements({ skipWhenOffline: false });
       
       // Animate slide-shut smoothly
       setTimeout(() => {
@@ -668,7 +694,8 @@ window.addEventListener('load', async () => {
   }
 
   // Load live data from Google Sheet
-  await fetchAnnouncements();
+  await refreshAnnouncements({ skipWhenOffline: false });
+  startAutoRefresh();
 });
 
 // Retry Button & Resilience actions
@@ -679,7 +706,7 @@ offlineBanner.addEventListener('click', async (event) => {
     try { await Haptics.vibrate({ duration: 40 }); } catch (e) {}
   }
   offlineBanner.innerHTML = `<span>Refreshing...</span>`;
-  await fetchAnnouncements();
+  await refreshAnnouncements({ skipWhenOffline: false });
   offlineBanner.innerHTML = `
     <svg class="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
@@ -692,7 +719,7 @@ offlineBanner.addEventListener('click', async (event) => {
 // Network online/offline status monitors
 window.addEventListener('online', () => {
   setConnectionStatus(true);
-  fetchAnnouncements();
+  refreshAnnouncements({ skipWhenOffline: false });
 });
 window.addEventListener('offline', () => {
   setConnectionStatus(false);
