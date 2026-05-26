@@ -7,6 +7,8 @@ import { GOOGLE_SHEET_CSV_URL } from './config.js';
 // DOM Elements
 const videoSplash = document.getElementById('video-splash');
 const splashVideo = document.getElementById('splash-video');
+// Hide video initially to avoid showing icon before playback starts
+splashVideo.style.visibility = 'hidden';
 const splashFallback = document.getElementById('splash-fallback');
 const skipSplashBtn = document.getElementById('skip-splash-btn');
 const themeToggle = document.getElementById('theme-toggle');
@@ -96,16 +98,14 @@ function initSplash() {
     }, 500);
   };
 
-  // Set up 4.5 second hard fallback timeout to avoid hanging on splash
-  const fallbackTimeout = setTimeout(completeSplash, 4500);
+  // Set up 2.5 second hard fallback timeout to avoid hanging on splash
+  const fallbackTimeout = setTimeout(completeSplash, 2500);
 
   // Setup video events
-  splashVideo.addEventListener('play', () => {
-    // Show video and hide static loading fallback once playing
-    splashVideo.classList.remove('hidden');
-    if (splashFallback) {
-      splashFallback.classList.add('hidden');
-    }
+  splashVideo.addEventListener('canplaythrough', () => {
+    // Show video when ready and hide fallback
+    splashVideo.style.visibility = 'visible';
+    if (splashFallback) splashFallback.classList.add('hidden');
   });
 
   splashVideo.addEventListener('ended', completeSplash);
