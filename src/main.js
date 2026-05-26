@@ -12,7 +12,6 @@ const themeToggle = document.getElementById('theme-toggle');
 const sunIcon = document.getElementById('sun-icon');
 const moonIcon = document.getElementById('moon-icon');
 const offlineBanner = document.getElementById('offline-banner');
-const retryBtn = document.getElementById('retry-btn');
 const tabCurrent = document.getElementById('tab-current');
 const tabPast = document.getElementById('tab-past');
 const announcementsFeed = document.getElementById('announcements-feed');
@@ -167,6 +166,19 @@ function parseCSV(text) {
   }
   
   return lines;
+}
+
+function normalizeHeader(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function getColumnIndex(headers, candidates, fallbackIndex) {
+  const normalized = headers.map(normalizeHeader);
+  const foundIndex = normalized.findIndex(header =>
+    candidates.some(candidate => header.includes(candidate))
+  );
+
+  return foundIndex >= 0 ? foundIndex : fallbackIndex;
 }
 
 // --- 4. DATA ENGINE: SEGMENTATION & SORTING ---
@@ -383,24 +395,31 @@ async function fetchAnnouncements() {
     const csvText = await fetchCsvText(GOOGLE_SHEET_CSV_URL);
     const rows = parseCSV(csvText);
 
-    // Schema Mapping (expecting 4 columns)
-    // Row 0 is header: Column A (Name), Column B (Ambition), Column C (Announcement), Column D (Target Date)
+    if (rows.length === 0) {
+      throw new Error("Sheet returned no CSV rows");
+    }
+
+    // Schema mapping supports the form response sheet:
+    // Timestamp, Your Name, Ambition, Announcement Details, Target Date...
+    const headers = rows[0] || [];
+    const nameIndex = getColumnIndex(headers, ['name'], 0);
+    const ambitionIndex = getColumnIndex(headers, ['ambition'], 1);
+    const announcementIndex = getColumnIndex(headers, ['announcement'], 2);
+    const targetDateIndex = getColumnIndex(headers, ['target date', 'release date', 'date'], 3);
     const formattedData = [];
     
     for (let i = 1; i < rows.length; i++) {
       const cols = rows[i];
-      if (cols.length >= 4 && cols[2].trim() !== "") {
+      const announcement = cols[announcementIndex] ? cols[announcementIndex].trim() : "";
+
+      if (announcement !== "") {
         formattedData.push({
-          name: cols[0] ? cols[0].trim() : "Unknown",
-          ambition: cols[1] ? cols[1].trim() : "General",
-          announcement: cols[2].trim(),
-          targetDate: cols[3] ? cols[3].trim() : "2026-05-20"
+          name: cols[nameIndex] ? cols[nameIndex].trim() : "Unknown",
+          ambition: cols[ambitionIndex] ? cols[ambitionIndex].trim() : "General",
+          announcement,
+          targetDate: cols[targetDateIndex] ? cols[targetDateIndex].trim() : getToday().toISOString().slice(0, 10)
         });
       }
-    }
-
-    if (formattedData.length === 0) {
-      throw new Error("No announcements found in sheet");
     }
 
     // Success! Update Cache
@@ -558,7 +577,9 @@ window.addEventListener('load', async () => {
 });
 
 // Retry Button & Resilience actions
-retryBtn.addEventListener('click', async () => {
+offlineBanner.addEventListener('click', async (event) => {
+  if (!event.target.closest('#retry-btn')) return;
+
   if (Capacitor.isNativePlatform()) {
     try { await Haptics.vibrate({ duration: 40 }); } catch (e) {}
   }
