@@ -7,6 +7,7 @@ import { GOOGLE_SHEET_CSV_URL } from './config.js';
 // DOM Elements
 const videoSplash = document.getElementById('video-splash');
 const splashVideo = document.getElementById('splash-video');
+const splashFallback = document.getElementById('splash-fallback');
 const skipSplashBtn = document.getElementById('skip-splash-btn');
 const themeToggle = document.getElementById('theme-toggle');
 const sunIcon = document.getElementById('sun-icon');
@@ -102,6 +103,9 @@ function initSplash() {
   splashVideo.addEventListener('play', () => {
     // Show video and hide static loading fallback once playing
     splashVideo.classList.remove('hidden');
+    if (splashFallback) {
+      splashFallback.classList.add('hidden');
+    }
   });
 
   splashVideo.addEventListener('ended', completeSplash);
