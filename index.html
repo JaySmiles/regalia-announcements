@@ -53,6 +53,9 @@
             <!-- Dynamic logo that inverts base colors perfectly in light mode -->
             <img src="/assets/logo.png" alt="Regalia Logo" class="logo-img invert dark:invert-0 transition duration-300 h-9 w-auto object-contain" />
           </div>
+          <span class="text-base font-bold tracking-normal text-m3-light-onSurface dark:text-m3-dark-onSurface">
+            Announcements
+          </span>
         </div>
         
         <!-- Light / Dark Mode Toggle Button -->
@@ -75,6 +78,17 @@
         </svg>
         <span>Offline: Displaying cached announcements.</span>
         <button id="retry-btn" class="ml-2 underline font-bold hover:opacity-85 active:scale-95 transition-transform">Retry</button>
+      </div>
+
+      <!-- Connection Status -->
+      <div class="flex-none bg-[#F7F2FA] dark:bg-[#141218] px-6 pt-3 transition-colors duration-300">
+        <div class="max-w-sm mx-auto flex items-center justify-between gap-3 text-[11px] font-semibold text-m3-light-onSurfaceVariant/70 dark:text-m3-dark-onSurfaceVariant/70">
+          <div class="flex items-center gap-2 min-w-0">
+            <span id="connection-dot" class="h-2.5 w-2.5 flex-none rounded-full bg-m3-light-outline dark:bg-m3-dark-outline transition-colors duration-300"></span>
+            <span id="connection-status" class="truncate">Checking connection</span>
+          </div>
+          <span id="last-refreshed" class="flex-none text-right">Not refreshed yet</span>
+        </div>
       </div>
 
       <!-- Segmented Control (Tabs) -->

@@ -12,6 +12,9 @@ const themeToggle = document.getElementById('theme-toggle');
 const sunIcon = document.getElementById('sun-icon');
 const moonIcon = document.getElementById('moon-icon');
 const offlineBanner = document.getElementById('offline-banner');
+const connectionDot = document.getElementById('connection-dot');
+const connectionStatus = document.getElementById('connection-status');
+const lastRefreshed = document.getElementById('last-refreshed');
 const tabCurrent = document.getElementById('tab-current');
 const tabPast = document.getElementById('tab-past');
 const announcementsFeed = document.getElementById('announcements-feed');
@@ -187,14 +190,61 @@ function getToday() {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
+function getNow() {
+  return new Date();
+}
+
+function parseAnnouncementDate(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+
+  const isoDate = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if (isoDate) {
+    const [, year, month, day, hour = '0', minute = '0', second = '0'] = isoDate;
+    return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second));
+  }
+
+  const slashDate = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s+(\d{1,2})(?::(\d{2}))?(?::(\d{2}))?\s*(AM|PM)?)?/i);
+  if (slashDate) {
+    let [, first, second, year, hour = '0', minute = '0', sec = '0', meridiem] = slashDate;
+    year = year.length === 2 ? `20${year}` : year;
+
+    const firstNumber = Number(first);
+    const secondNumber = Number(second);
+    const month = firstNumber > 12 ? secondNumber : firstNumber;
+    const day = firstNumber > 12 ? firstNumber : secondNumber;
+    let parsedHour = Number(hour);
+
+    if (meridiem) {
+      const upperMeridiem = meridiem.toUpperCase();
+      if (upperMeridiem === 'PM' && parsedHour < 12) parsedHour += 12;
+      if (upperMeridiem === 'AM' && parsedHour === 12) parsedHour = 0;
+    }
+
+    return new Date(Number(year), month - 1, day, parsedHour, Number(minute), Number(sec));
+  }
+
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 function getRelativeDateString(dateStr) {
   try {
-    const targetDate = new Date(dateStr + "T00:00:00");
+    const targetDate = parseAnnouncementDate(dateStr);
+    if (!targetDate) return dateStr || "No date";
+
     const today = getToday();
     
     const diffTime = targetDate.getTime() - today.getTime();
     const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+    const hasTime = targetDate.getHours() !== 0 || targetDate.getMinutes() !== 0;
     
+    if (diffDays === 0 && hasTime) {
+      return `Today, ${targetDate.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit'
+      })}`;
+    }
     if (diffDays === 0) return "Today";
     if (diffDays === -1) return "Yesterday";
     if (diffDays === 1) return "Tomorrow";
@@ -219,26 +269,25 @@ function processAndRenderFeed() {
     past: []
   };
 
-  const todayDate = getToday();
+  const now = getNow();
+  const pastThresholdMs = 24 * 60 * 60 * 1000;
 
   announcementsData.forEach(item => {
-    const target = new Date(item.targetDate + "T00:00:00");
-    const diffTime = todayDate.getTime() - target.getTime();
-    const diffDays = diffTime / (1000 * 60 * 60 * 24); // Positive means past, negative means future
+    const target = parseAnnouncementDate(item.targetDate);
+    const ageMs = target ? now.getTime() - target.getTime() : 0;
     
-    // New: today, in the future, or <= 2 days in the past (diffDays <= 2)
-    if (diffDays <= 2) {
-      segmented.current.push(item);
-    } else {
+    if (target && ageMs >= pastThresholdMs) {
       segmented.past.push(item);
+    } else {
+      segmented.current.push(item);
     }
   });
 
   // Sort chronologically: newest (most future/recent) first (descending targetDate)
   const sortFeed = (arr) => {
     return arr.sort((a, b) => {
-      const dateA = new Date(a.targetDate + "T00:00:00");
-      const dateB = new Date(b.targetDate + "T00:00:00");
+      const dateA = parseAnnouncementDate(a.targetDate) || new Date(0);
+      const dateB = parseAnnouncementDate(b.targetDate) || new Date(0);
       return dateB - dateA;
     });
   };
@@ -306,6 +355,46 @@ function escapeHTML(str) {
   );
 }
 
+// --- 5. CONNECTION STATUS ---
+function formatLastRefreshed(timestamp) {
+  if (!timestamp) return "Not refreshed yet";
+
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return "Not refreshed yet";
+
+  const today = getToday();
+  const refreshDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diffDays = Math.round((today.getTime() - refreshDay.getTime()) / (1000 * 60 * 60 * 24));
+  const time = date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit'
+  });
+
+  if (diffDays === 0) return `Updated ${time}`;
+  if (diffDays === 1) return `Updated yesterday, ${time}`;
+
+  return `Updated ${date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric'
+  })}, ${time}`;
+}
+
+function setConnectionStatus(isOnline = navigator.onLine) {
+  connectionDot.className = isOnline
+    ? "h-2.5 w-2.5 flex-none rounded-full bg-green-500 shadow-[0_0_0_3px_rgba(34,197,94,0.18)] transition-colors duration-300"
+    : "h-2.5 w-2.5 flex-none rounded-full bg-m3-light-error dark:bg-m3-dark-error shadow-[0_0_0_3px_rgba(179,38,30,0.16)] transition-colors duration-300";
+  connectionStatus.textContent = isOnline ? "Online" : "Offline";
+}
+
+function updateLastRefreshedLabel() {
+  lastRefreshed.textContent = formatLastRefreshed(localStorage.getItem('last_refreshed_at'));
+}
+
+function markLastRefreshed() {
+  localStorage.setItem('last_refreshed_at', new Date().toISOString());
+  updateLastRefreshedLabel();
+}
+
 // --- 5. DETECT NEW & FIRE NATIVE NOTIFICATIONS ---
 async function checkAndNotifyNew(newData) {
   // Read saved hashes snapshot
@@ -349,12 +438,13 @@ async function checkAndNotifyNew(newData) {
     // Schedule notification for each new addition
     for (let i = 0; i < newAdditions.length; i++) {
       const item = newHashesMap[newAdditions[i]];
+      const notificationBody = `${item.ambition}: ${item.announcement}`;
       try {
         await LocalNotifications.schedule({
           notifications: [
             {
-              title: `New announcement from ${item.ambition}!`,
-              body: item.announcement.substring(0, 100) + (item.announcement.length > 100 ? '...' : ''),
+              title: `New announcement from ${item.name}!`,
+              body: notificationBody.substring(0, 100) + (notificationBody.length > 100 ? '...' : ''),
               id: Math.floor(Math.random() * 100000),
               schedule: { at: new Date(Date.now() + 500) }, // fire almost instantly
             }
@@ -426,6 +516,8 @@ async function fetchAnnouncements() {
     announcementsData = formattedData;
     localStorage.setItem('announcements_cache', JSON.stringify(formattedData));
     offlineBanner.classList.add('hidden');
+    setConnectionStatus(true);
+    markLastRefreshed();
 
     // Run notification evaluation engine
     await checkAndNotifyNew(formattedData);
@@ -434,6 +526,7 @@ async function fetchAnnouncements() {
   } catch (err) {
     console.warn("Fetch failed, loading from cache...", err);
     offlineBanner.classList.remove('hidden');
+    setConnectionStatus(false);
 
     // Fallback: Read from local Cache
     const cached = localStorage.getItem('announcements_cache');
@@ -549,6 +642,8 @@ window.addEventListener('load', async () => {
   initTheme();
   initSplash();
   initPullToRefresh();
+  setConnectionStatus();
+  updateLastRefreshedLabel();
   
   // Try loading cached items immediately so the screen is never blank
   const cached = localStorage.getItem('announcements_cache');
@@ -596,8 +691,10 @@ offlineBanner.addEventListener('click', async (event) => {
 
 // Network online/offline status monitors
 window.addEventListener('online', () => {
+  setConnectionStatus(true);
   fetchAnnouncements();
 });
 window.addEventListener('offline', () => {
+  setConnectionStatus(false);
   offlineBanner.classList.remove('hidden');
 });
