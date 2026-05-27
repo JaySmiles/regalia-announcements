@@ -274,9 +274,10 @@ function getRelativeDateString(dateStr) {
   }
 }
 
+// Track the last rendered feed snapshot to avoid unnecessary re-renders
+let lastRenderedSnapshot = '';
+
 function processAndRenderFeed() {
-  announcementsFeed.innerHTML = "";
-  
   // Segment announcements
   const segmented = {
     current: [],
@@ -307,6 +308,16 @@ function processAndRenderFeed() {
   };
 
   const activeAnnouncements = sortFeed(segmented[currentTab]);
+
+  // Build a snapshot string to compare against the last render
+  const snapshot = currentTab + '|' + JSON.stringify(activeAnnouncements);
+  if (snapshot === lastRenderedSnapshot) {
+    // Data hasn't changed — skip re-render to prevent flicker
+    return;
+  }
+  lastRenderedSnapshot = snapshot;
+
+  announcementsFeed.innerHTML = "";
 
   if (activeAnnouncements.length === 0) {
     announcementsFeed.innerHTML = `
