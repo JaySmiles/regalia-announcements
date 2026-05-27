@@ -7,8 +7,6 @@ import { GOOGLE_SHEET_CSV_URL } from './config.js';
 // DOM Elements
 const videoSplash = document.getElementById('video-splash');
 const splashVideo = document.getElementById('splash-video');
-// Hide video initially to avoid showing icon before playback starts
-splashVideo.style.visibility = 'hidden';
 const splashFallback = document.getElementById('splash-fallback');
 const skipSplashBtn = document.getElementById('skip-splash-btn');
 const themeToggle = document.getElementById('theme-toggle');
@@ -79,10 +77,15 @@ themeToggle.addEventListener('click', async () => {
 // --- 2. PREMIUM VIDEO SPLASH ENGINE ---
 function initSplash() {
   let splashCompleted = false;
+  let playTimeout = null;
 
   const completeSplash = () => {
     if (splashCompleted) return;
     splashCompleted = true;
+    
+    // Clear any pending timers to avoid duplicate triggers
+    clearTimeout(fallbackTimeout);
+    clearTimeout(playTimeout);
     
     // Smooth transition fade-out
     videoSplash.classList.add('fade-out');
@@ -98,22 +101,31 @@ function initSplash() {
     }, 500);
   };
 
-  // Set up 2.5 second hard fallback timeout to avoid hanging on splash
-  // Set up 2 second hard fallback timeout to avoid hanging on splash
-  const fallbackTimeout = setTimeout(completeSplash, 2000);
+  // Set up a 5 second hard fallback timeout to avoid hanging on splash but allowing video to play.
+  const fallbackTimeout = setTimeout(completeSplash, 5000);
 
   // Setup video events
   splashVideo.addEventListener('loadedmetadata', () => {
     const duration = splashVideo.duration;
     if (duration && duration > 2) {
       // End splash 2 seconds before video ends
-      setTimeout(completeSplash, (duration - 2) * 1000);
+      playTimeout = setTimeout(completeSplash, (duration - 2) * 1000);
     }
   });
-  splashVideo.addEventListener('play', () => {
-    // Show video when playback starts and hide fallback
-    splashVideo.classList.remove('hidden');
-    if (splashFallback) splashFallback.classList.add('hidden');
+
+  splashVideo.addEventListener('playing', () => {
+    // Clear the fallback timeout since the video is successfully playing
+    clearTimeout(fallbackTimeout);
+
+    // Fade in the video and fade out fallback UI
+    splashVideo.classList.remove('opacity-0', 'pointer-events-none');
+    splashVideo.classList.add('opacity-100');
+    if (splashFallback) {
+      splashFallback.classList.add('opacity-0');
+      setTimeout(() => {
+        splashFallback.classList.add('hidden');
+      }, 300);
+    }
   });
 
   splashVideo.addEventListener('ended', completeSplash);
@@ -121,7 +133,6 @@ function initSplash() {
   // Handle video error (e.g. file not found/loaded)
   splashVideo.addEventListener('error', () => {
     console.warn("Splash video not loaded/error. Falling back to main screen.");
-    clearTimeout(fallbackTimeout);
     completeSplash();
   });
 
@@ -130,7 +141,6 @@ function initSplash() {
     if (Capacitor.isNativePlatform()) {
       try { await Haptics.vibrate({ duration: 50 }); } catch (e) {}
     }
-    clearTimeout(fallbackTimeout);
     completeSplash();
   });
 
@@ -142,7 +152,7 @@ function initSplash() {
     playPromise.catch(error => {
       console.log("Auto-play prevented or video missing. Displaying fallback spinner.", error);
       // Wait 2.5 seconds on beautiful static placeholder screen, then fade out
-      setTimeout(completeSplash, 2500);
+      playTimeout = setTimeout(completeSplash, 2500);
     });
   }
 }
