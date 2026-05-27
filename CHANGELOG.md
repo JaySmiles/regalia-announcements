@@ -4,6 +4,17 @@ All notable changes to the **Regalia Announcements** mobile application will be 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-05-27
+
+### Changed
+- **Optimized Splash Playback**: Adjusted the splash video to complete 2 seconds early and reduced the fallback timeout threshold, significantly improving application startup speed.
+- **Visual Cleanups**: Cleaned up empty feed markup and container skeletons during transition states to ensure a cleaner visual presentation.
+
+### Fixed
+- **Flicker Mitigation**: Resolved splash screen flicker and visibility glitches on load by hiding the video element until it is fully loaded and ready to play.
+- **Transition Overhaul**: Removed display/visibility toggles that occasionally suppressed the video entirely, implementing an elegant CSS fade-in transition triggered immediately when the video playback event starts.
+- **Timer Handling**: Refactored splash lifecycle timers to ensure all register and fallback timeouts are cleanly and reliably cleared, preventing race conditions or overlapping states.
+
 ---
 
 ## [1.2.0] - 2026-05-26
@@ -47,6 +58,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **Fluid Layout Engine**: Designed an announcement display layout integrated with Tailwind styles for scalable typography, dynamic layout structure, and unified custom UI styling.
 - **Continuous Integration Pipeline**: Configured a complete GitHub Actions CI script (`android-build.yml`) for automated linting, building, and validation of Android builds.
 
+[1.3.0]: https://github.com/JaySmiles/regalia-announcements/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/JaySmiles/regalia-announcements/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/JaySmiles/regalia-announcements/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/JaySmiles/regalia-announcements/releases/tag/v1.0.0
+
