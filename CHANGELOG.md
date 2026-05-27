@@ -7,13 +7,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ## [1.3.0] - 2026-05-27
 
 ### Changed
-- **Optimized Splash Playback**: Adjusted the splash video to complete 2 seconds early and reduced the fallback timeout threshold, significantly improving application startup speed.
+- **Full Splash Playback**: Adjusted the splash experience to allow the video to play entirely to completion, ensuring the full high-fidelity cinematic splash intro is presented.
+- **Intelligent Loading Screen Fallback**: Hidden the static fallback loading screen by default on startup, displaying it dynamically only if network delays or video loading issues trigger the fallback timeout.
 - **Visual Cleanups**: Cleaned up empty feed markup and container skeletons during transition states to ensure a cleaner visual presentation.
 
 ### Fixed
 - **Flicker Mitigation**: Resolved splash screen flicker and visibility glitches on load by hiding the video element until it is fully loaded and ready to play.
 - **Transition Overhaul**: Removed display/visibility toggles that occasionally suppressed the video entirely, implementing an elegant CSS fade-in transition triggered immediately when the video playback event starts.
 - **Timer Handling**: Refactored splash lifecycle timers to ensure all register and fallback timeouts are cleanly and reliably cleared, preventing race conditions or overlapping states.
+
 
 ---
 
