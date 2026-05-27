@@ -99,12 +99,20 @@ function initSplash() {
   };
 
   // Set up 2.5 second hard fallback timeout to avoid hanging on splash
-  const fallbackTimeout = setTimeout(completeSplash, 2500);
+  // Set up 2 second hard fallback timeout to avoid hanging on splash
+  const fallbackTimeout = setTimeout(completeSplash, 2000);
 
   // Setup video events
-  splashVideo.addEventListener('canplaythrough', () => {
-    // Show video when ready and hide fallback
-    splashVideo.style.visibility = 'visible';
+  splashVideo.addEventListener('loadedmetadata', () => {
+    const duration = splashVideo.duration;
+    if (duration && duration > 2) {
+      // End splash 2 seconds before video ends
+      setTimeout(completeSplash, (duration - 2) * 1000);
+    }
+  });
+  splashVideo.addEventListener('play', () => {
+    // Show video when playback starts and hide fallback
+    splashVideo.classList.remove('hidden');
     if (splashFallback) splashFallback.classList.add('hidden');
   });
 
@@ -303,14 +311,12 @@ function processAndRenderFeed() {
 
   if (activeAnnouncements.length === 0) {
     announcementsFeed.innerHTML = `
-      <div class="flex flex-col items-center justify-center p-12 text-center select-none animate-[fadeIn_0.5s_ease]">
-        <div class="p-4 bg-m3-light-surfaceVariant dark:bg-m3-dark-surfaceVariant rounded-full mb-4 text-m3-light-onSurfaceVariant/50 dark:text-m3-dark-onSurfaceVariant/50">
-          <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-          </svg>
-        </div>
-        <p class="text-sm font-semibold text-m3-light-onSurfaceVariant/60 dark:text-m3-dark-onSurfaceVariant/60">No announcements in this category</p>
+      <div class="p-4 bg-m3-light-surfaceVariant dark:bg-m3-dark-surfaceVariant rounded-full mb-4 text-m3-light-onSurfaceVariant/50 dark:text-m3-dark-onSurfaceVariant/50">
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+        </svg>
       </div>
+      <p class="text-sm font-semibold text-m3-light-onSurfaceVariant/60 dark:text-m3-dark-onSurfaceVariant/60">No announcements in this category</p>
     `;
     return;
   }
