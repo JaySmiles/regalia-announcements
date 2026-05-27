@@ -77,15 +77,13 @@ themeToggle.addEventListener('click', async () => {
 // --- 2. PREMIUM VIDEO SPLASH ENGINE ---
 function initSplash() {
   let splashCompleted = false;
-  let playTimeout = null;
 
   const completeSplash = () => {
     if (splashCompleted) return;
     splashCompleted = true;
     
-    // Clear any pending timers to avoid duplicate triggers
+    // Clear the hard fallback timeout
     clearTimeout(fallbackTimeout);
-    clearTimeout(playTimeout);
     
     // Smooth transition fade-out
     videoSplash.classList.add('fade-out');
@@ -101,33 +99,23 @@ function initSplash() {
     }, 500);
   };
 
-  // Set up a 5 second hard fallback timeout to avoid hanging on splash but allowing video to play.
-  const fallbackTimeout = setTimeout(completeSplash, 5000);
-
-  // Setup video events
-  splashVideo.addEventListener('loadedmetadata', () => {
-    const duration = splashVideo.duration;
-    if (duration && duration > 2) {
-      // End splash 2 seconds before video ends
-      playTimeout = setTimeout(completeSplash, (duration - 2) * 1000);
-    }
-  });
+  // Set up a hard fallback timeout — only fires if video never starts playing
+  const fallbackTimeout = setTimeout(() => {
+    // Show fallback loader since video didn't start in time
+    if (splashFallback) splashFallback.classList.remove('hidden');
+    setTimeout(completeSplash, 2000);
+  }, 5000);
 
   splashVideo.addEventListener('playing', () => {
     // Clear the fallback timeout since the video is successfully playing
     clearTimeout(fallbackTimeout);
 
-    // Fade in the video and fade out fallback UI
+    // Fade in the video
     splashVideo.classList.remove('opacity-0', 'pointer-events-none');
     splashVideo.classList.add('opacity-100');
-    if (splashFallback) {
-      splashFallback.classList.add('opacity-0');
-      setTimeout(() => {
-        splashFallback.classList.add('hidden');
-      }, 300);
-    }
   });
 
+  // Let the video play to natural completion
   splashVideo.addEventListener('ended', completeSplash);
   
   // Handle video error (e.g. file not found/loaded)
@@ -151,8 +139,9 @@ function initSplash() {
   if (playPromise !== undefined) {
     playPromise.catch(error => {
       console.log("Auto-play prevented or video missing. Displaying fallback spinner.", error);
-      // Wait 2.5 seconds on beautiful static placeholder screen, then fade out
-      playTimeout = setTimeout(completeSplash, 2500);
+      // Show fallback loader and dismiss after 2.5s
+      if (splashFallback) splashFallback.classList.remove('hidden');
+      setTimeout(completeSplash, 2500);
     });
   }
 }
